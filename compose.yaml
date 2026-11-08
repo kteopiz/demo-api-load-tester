@@ -1,0 +1,26 @@
+services:
+  api:
+    build: .
+    command: ["python", "mock_api.py", "--host", "0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).close()"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+
+  load-test:
+    build: .
+    command: ["python", "docker/run_demo.py"]
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      REQUESTS: "${REQUESTS:-100}"
+      CACHED_PERCENT: "${CACHED_PERCENT:-20}"
+      HOURS: "${HOURS:-24}"
+      SEED: "${SEED:-42}"
+      CONCURRENCY: "${CONCURRENCY:-5}"
+      DURATION: "${DURATION:-10S}"
+    volumes:
+      - ./output:/output

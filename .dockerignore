@@ -1,0 +1,10 @@
+.git
+.agents
+.codex
+.aws
+__pycache__
+**/__pycache__
+*.py[cod]
+data/urls.siege
+output/
+siege.log

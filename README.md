@@ -12,18 +12,66 @@ This version preserves that approach using a fictional API contract, illustrativ
 
 The generator uses Python's standard library and writes a Siege request file without making network requests. An optional local mock API lets you run the full workflow with synthetic responses.
 
-## Quick start
+## Full demo with Docker
 
-Requires Python 3.9 or later. Siege is optional and needed only to execute the generated workload.
+Install and start Docker with the Compose plugin (Docker Desktop includes both). Python and Siege run inside the containers; neither is required on your host.
 
 ```sh
-# Generate 100 requests with reproducible sampling
-python3 main.py --requests 100 --cached-percent 20 --hours 24 --seed 42
+docker compose up --build --abort-on-container-exit --exit-code-from load-test
+```
 
-# Inspect the generated request file
+Compose builds the image, starts the synthetic API, waits for its health check, and generates 100 requests with seed 42. Siege then runs a 10-second benchmark with five concurrent users. When the load test finishes, Compose stops the API and returns the load-test exit code. No host ports are published.
+
+The image pins **Siege 4.0.7**, Debian package `4.0.7-1+b1`, from [Debian Bookworm](https://packages.debian.org/bookworm/siege). Python uses the `3.12-slim-bookworm` image. The base image and other system packages can receive updates, so this is not a byte-for-byte reproducible image build. Each run records the actual Siege and Python versions. The full Docker workflow has been verified on ARM64 with Siege 4.0.7.
+
+**Read the latest run at a glance in `output/output.txt`:**
+
+```sh
+cat output/output.txt
+# On macOS, open it in TextEdit:
+open -a TextEdit output/output.txt
+```
+
+The report includes completion status, workload profile counts, hot-location share, concurrent users, duration, successful and failed transactions, availability, throughput in requests per second, and response times. It also explains what the numbers mean and points to the detailed files. Each run replaces this latest report; failed runs handled by the runner also produce a report. If Docker fails before the runner starts, check the terminal and the report's timestamp—the previous report may still be present.
+
+A copy of the report and the detailed artifacts are saved under `output/<UTC timestamp>/`:
+
+- `output.txt`: the readable summary for this specific run.
+
+- `urls.siege`: generated request payloads targeting the Compose API service.
+- `console.log`: generator output and Siege's console summary.
+- `siege.log`: Siege's aggregate statistics.
+- `run.json`: tool versions and the commands used for the run.
+
+The generated file contains 100 workload entries; a timed Siege run can send many more than 100 requests by cycling through the workload. Benchmark mode removes delays between requests. See the [Siege manual](https://www.joedog.org/siege/manual) for its execution modes and statistics.
+
+To change the workload and run settings in a POSIX shell:
+
+```sh
+REQUESTS=500 CACHED_PERCENT=40 HOURS=48 SEED=7 CONCURRENCY=10 DURATION=20S \
+  docker compose up --build --abort-on-container-exit --exit-code-from load-test
+```
+
+`DURATION` accepts a positive integer followed by `S`, `M`, or `H`. `CONCURRENCY` must be positive. Workload options have the same constraints as the CLI below. On Windows, set the environment variables using your shell's syntax before running Compose.
+
+Remove the stopped containers and demo network afterward:
+
+```sh
+docker compose down
+```
+
+Your `output/` artifacts remain on disk and are ignored by Git. Docker-created files may be owned by root on Linux hosts.
+
+## Run without Docker
+
+Generating a workload requires Python 3.9 or later. Running the complete local demo also requires Siege; the Docker setup pins the version described above.
+
+```sh
+# Generate a reproducible workload without contacting a server
+python3 main.py --requests 100 --cached-percent 20 --hours 24 --seed 42
 head -n 2 data/urls.siege
 
-# Start the optional local demo API (leave running)
+# Start the optional mock API (leave running)
 python3 mock_api.py
 ```
 
@@ -31,10 +79,10 @@ In another terminal:
 
 ```sh
 curl http://localhost:8000/health
-siege -c5 -t10S -f data/urls.siege --content-type 'application/json' -H 'Accept: application/json'
+siege --benchmark -c5 -t10S -f data/urls.siege --content-type 'application/json' -H 'Accept: application/json'
 ```
 
-Use Ctrl-C to stop the demo server. It binds only to the local machine. It returns deterministic synthetic values and does not implement caching or emulate a production service. Siege results measure this local Python mock and the host machine, not a real weather backend.
+Use Ctrl-C to stop the standalone server. It binds to `127.0.0.1` by default; Compose explicitly uses `--host 0.0.0.0` for communication between containers. The mock returns deterministic synthetic values without implementing caching or emulating production infrastructure. Measurements describe this Python mock and your machine, not the original weather service.
 
 ## How the workload works
 
@@ -81,6 +129,8 @@ Default file paths are relative to the project directory; explicit paths are rel
 - `utils/urls.py`: Siege serialization.
 - `data/synthetic_locations.csv`: synthetic hot locations without traffic counts.
 - `mock_api.py`: optional local forecast service.
+- `Dockerfile` and `compose.yaml`: containerized API and pinned Siege runner.
+- `docker/run_demo.py`: workload execution and per-run artifact capture.
 - `tests/test_demo.py`: allocation, reproducibility, serialization, and HTTP checks.
 
 ## Checks
