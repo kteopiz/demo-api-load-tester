@@ -1,0 +1,4 @@
+data/urls.siege
+siege.log
+__pycache__/
+*.py[cod]
