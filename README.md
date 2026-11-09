@@ -1,12 +1,12 @@
 # Canadian Weather Workload Generator
 
-This portfolio project is a generalized adaptation of an API load-testing CLI I owned during my time at Environment and Climate Change Canada.
+This project is a generalized adaptation of an API load-testing CLI I owned during my time at Environment and Climate Change Canada.
 
 Four new weather features depended on an experimental internal API. Each feature requested its own set of weather parameters, and those requests could target any latitude and longitude in Canada. As the API team encountered slow response times, they and project managers needed a repeatable way to test the API against the specific requests those features would make.
 
 I built the CLI to generate those workloads for Siege, combining feature-specific request profiles with repeated locations and randomly sampled coordinates across a Canadian bounding box. This made it possible to run load tests repeatedly using the same kinds of requests the application sent.
 
-The proportion of requests assigned to each feature was configurable. Before launch, we had no usage data, so the initial weights reflected our best estimates. After the first week of launch, we analyzed web usage and adjusted the weights to reflect how people actually used the features. The workload could evolve from an assumed traffic mix to one informed by observed behavior.
+The proportion of requests assigned to each feature was configurable. Before launch, we had no usage data, so the initial weights reflected our best estimates. After week-long launch, we analyzed web usage and adjusted the weights to reflect how people actually used the features. The workload could evolve from an assumed traffic mix to one informed by observed behavior.
 
 This version preserves that approach using a fictional API contract, illustrative workload weights, and synthetic location data. It is a personal portfolio demonstration, not an official or endorsed Environment and Climate Change Canada project, and it does not produce real forecasts.
 
